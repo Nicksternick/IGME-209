@@ -29,60 +29,78 @@ Tank::~Tank()
 void Tank::Render(RenderWindow& window)
 {
     window.draw(m_baseSprite);// draw the base sprite
-    window.draw(m_turretSprite);// draw the base sprite
+    window.draw(m_turretSprite);// draw the base sprite 
 }
 
 void Tank::Update(RenderWindow& window, float deltaSeconds)
 {
-    Vector2f moveDirection = Vector2f(0, 0);
 
-    if (Keyboard::isKeyPressed(Keyboard::W) == true)
-    {
-        moveDirection = Vector2f(0, 1);
-        m_rotation = 0;
+    Vector2f movement = Vector2f(0, 0);
+    float rotation = m_baseSprite.getRotation();
+
+    if (Keyboard::isKeyPressed(Keyboard::W)) {
+        rotation = 0;
+        movement.y -= m_move_speed * deltaSeconds;
     }
-    else if (Keyboard::isKeyPressed(Keyboard::S) == true)
-    {
-        moveDirection = Vector2f(0, -1);
-        m_rotation = 180;
+    else if (Keyboard::isKeyPressed(Keyboard::S)) {
+        rotation = 180;
+        movement.y += m_move_speed * deltaSeconds;
     }
-    else if (Keyboard::isKeyPressed(Keyboard::A) == true)
-    {
-        moveDirection = Vector2f(1, 0);
-        m_rotation = -90;
+    else if (Keyboard::isKeyPressed(Keyboard::A)) {
+        rotation = -90;
+        movement.x -= m_move_speed * deltaSeconds;
     }
-    else if (Keyboard::isKeyPressed(Keyboard::D) == true)
-    {
-        moveDirection = Vector2f(-1, 0);
-        m_rotation = 90;
+    else if (Keyboard::isKeyPressed(Keyboard::D)) {
+        rotation = 90;
+        movement.x += m_move_speed * deltaSeconds;
     }
 
-    m_baseSprite.move(moveDirection * m_move_speed * deltaSeconds);
-    m_turretSprite.move(moveDirection * m_move_speed * deltaSeconds);
-
-    m_baseSprite.setRotation(m_rotation);
-    m_turretSprite.setRotation(m_rotation);
-
-    if (m_baseSprite.getPosition().y < 0.0f) {
-        m_move_speed = -m_move_speed;
-        m_baseSprite.setPosition(m_baseSprite.getPosition().x, 0.0f);
+    Vector2f newPosition = m_baseSprite.getPosition() + movement;
+    if (TankMap::s_instance->CheckRectValid(newPosition, Vector2f(m_baseSprite.getTexture()->getSize()) * m_baseSprite.getScale().x)) {
+        // if (TankMap::s_instance->CheckPositionValid(newPosition)) {
+            // set position
+        m_baseSprite.setPosition(newPosition);
+        m_turretSprite.setPosition(newPosition);
     }
 
-    if (m_baseSprite.getPosition().y > window.getSize().y) {
-        m_move_speed = -m_move_speed;
-        m_baseSprite.setPosition(m_baseSprite.getPosition().x, window.getSize().y);
+    // set rotation
+    m_baseSprite.setRotation(rotation);
+    m_turretSprite.setRotation(rotation);
+
+    /*if (Keyboard::isKeyPressed(Keyboard::J)) {
+        m_turretSprite.rotate(-180.0f * deltaSeconds);
+    }
+    if (Keyboard::isKeyPressed(Keyboard::K)) {
+        m_turretSprite.rotate(180.0f * deltaSeconds);
+    }*/
+
+    // fire!
+    if (m_is_fire_button_down == false && Keyboard::isKeyPressed(Keyboard::Space)) {
+        this->Fire();
+    }
+    m_is_fire_button_down = Keyboard::isKeyPressed(Keyboard::Space);
+
+
+    // change camera view type
+    if (m_view_type == FOCUS) {
+        View view = window.getView();
+        view.setCenter(m_baseSprite.getPosition());
+        view.setSize(window.getDefaultView().getSize() / 3.0f); // change size if you want
+        window.setView(view);
     }
 
-    if (m_is_fire_key_pressed == false && 
-        Keyboard::isKeyPressed(Keyboard::Space) == true)
-    {
-        Fire();
-    }
+    if (m_is_camera_switch_button_down == false && Keyboard::isKeyPressed(Keyboard::C)) {
+        m_view_type = (VIEW_TYPE)((m_view_type + 1) % 2);
 
-    m_is_fire_key_pressed = Keyboard::isKeyPressed(Keyboard::Space);
+        if (m_view_type == VIEW_TYPE::FREE) {
+            View view = window.getDefaultView();
+            window.setView(view);
+        }
+    }
+    m_is_camera_switch_button_down = Keyboard::isKeyPressed(Keyboard::C);
 }
 
 void Tank::Fire()
 {
-    cout << "Fire!!" << endl;
+    cout << "Fire!" << endl;
 }

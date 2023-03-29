@@ -1,51 +1,91 @@
 #include "TankMap.h"
+#include <fstream>
 
-TankMap::TankMap()
+
+TankMap* TankMap::s_instance = nullptr;
+
+TankMap::TankMap(string path)
 {
-	LoadData("Maps/level1.txt");
-	LoadTexture("Images/");
+    s_instance = this;
+    LoadMap(path);
+    InitSprite("Images/");
 }
 
-void TankMap::Render(sf::RenderWindow& window)
+Vector2u TankMap::GetMapSize()
 {
-	for (int i = 0; i < m_row_num; i++) {
-		for (int j = 0; i < m_col_num; i++) {
-			int type = m_map_data[i * m_col_num + j];
-			Sprite sprite = m_map_sprites[type];
-			Vector2f position = Vector2f(m_cell_size.x * j, m_cell_size.y * i);
-			sprite.setPosition(position);
-
-			window.draw(sprite);
-		}
-	}
+    return Vector2u(m_row_n, m_col_n);
 }
 
-void TankMap::LoadData(string path)
+void TankMap::LoadMap(string path)
 {
-	ifstream inf;
-	inf.open(path);
-	inf >> m_row_num;
-	inf >> m_col_num;
+    ifstream inf;
+    inf.open(path); // open the file
 
-	m_map_data = new int[m_row_num * m_col_num];
 
-	for (int i = 0; i < m_row_num; i++) {
-		for (int j = 0; i < m_col_num; i++) {
-			inf >> m_map_data[m_col_num * i + j]; // Read the data
-		}
-	}
+    inf >> m_row_n; // read the number of the rows
+    inf >> m_col_n; // read the number of the columns
 
-	inf.close();
+    m_map_data = new int[m_row_n * m_col_n]; // allocate memory to save the data
+
+     // read the map data from file
+    for (int i = 0; i < m_row_n; i++) {
+        for (int j = 0; j < m_col_n; j++) {
+            inf >> m_map_data[i * m_col_n + j];
+        }
+    }
+
+    inf.close();    // close the file
 }
 
-void TankMap::LoadTexture(string path_to_folder)
+void TankMap::InitSprite(string path_to_folder)
 {
-	for (int i = 0; i < MAP_TYPE_NUMBER; i++)
-	{
-		Texture* texture = new Texture();
-		texture->loadFromFile(path_to_folder + m_map_type_name[i] + ".png");
+    for (int i = 0; i < MAP_TYPE_NUMBER; i++) {
+        Texture* texture = new Texture();
+        texture->loadFromFile(path_to_folder + g_name_of_types[i] + ".png");
+        m_map_sprites[i].setTexture(*texture);
+        m_map_sprites[i].setScale((float)m_cell_size.x / texture->getSize().x, (float)m_cell_size.y / texture->getSize().y);
+    }
+}
 
-		m_map_sprites[i].setTexture(*texture);
-		m_map_sprites[i].setScale(m_cell_size.x / texture->getSize().x, m_cell_size.y / texture->getSize().y);
-	}
+bool TankMap::CheckPositionValid(Vector2f position)
+{
+    int x = position.x / m_cell_size.x;
+    int y = position.y / m_cell_size.y;
+
+    if (x < 0 || y < 0 || x >= m_row_n || y >= m_col_n)
+        return false;
+
+    int type = m_map_data[y * m_col_n + x];
+
+    // return if the terrain can be passed or not 
+    if (type == 0)
+        return true;
+    else
+        return false;
+}
+
+bool TankMap::CheckRectValid(Vector2f position, Vector2f size)
+{
+    if (CheckPositionValid(position + 0.5f * size) == false)
+        return false;
+    else if (CheckPositionValid(position - 0.5f * size) == false)
+        return false;
+    else if (CheckPositionValid(position + Vector2f(-0.5f * size.x, 0.5f * size.y)) == false)
+        return false;
+    else if (CheckPositionValid(position + Vector2f(0.5f * size.x, -0.5f * size.y)) == false)
+        return false;
+    return true;
+}
+
+void TankMap::Render(RenderWindow& window)
+{
+    for (int i = 0; i < m_row_n; i++) {
+        for (int j = 0; j < m_col_n; j++) {
+            int type = m_map_data[i * m_col_n + j];
+            Vector2f position = Vector2f(j * m_cell_size.x, i * m_cell_size.y);
+            m_map_sprites[type].setPosition(position);
+
+            window.draw(m_map_sprites[type]);
+        }
+    }
 }
